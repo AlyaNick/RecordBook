@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load crispy_forms_filters %}
+
+{% load static %}
+
+{% block title %}RecordBook{% endblock %}
+
+{% block header %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">RecordBook</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="{% url 'home' %}">PhoneBook</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="{% url 'list' %}">List record</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav justify-content-end">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Log in</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'logout' %}">Log out</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="">{{ user }}</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="card"  id="cardblock">
+        <div class="card-body">
+            <h5 class="card-title">Phones</h5>
+            <table class="table">
+                <theard>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Phones</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </theard>
+                <tbody>
+                {% for persone in persones %}
+                    {% if persone.user == user %}
+                        <tr>
+                            <td>{{ persone.pk }}</td>
+                            <td>{{ persone.name }}</td>
+                            <td>{{ persone.all_phones_to_string }}</td>
+                            <td>
+                                <button data-bs-toggle="modal" onclick="deletePhones({{ persone.id }})"
+                                        class="btn btn-primary">Delete
+                                </button>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                <tr>
+                    <td>
+                 <button data-bs-toggle="modal" onclick="addRecord()" class="btn btn-primary btn-success btn btn-primary btn-lg btn-bloc">add</button>
+           </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!--Modal addPhone-->
+    <div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Добавление Phone</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <h1>Create new record</h1>
+                    <form action="" method="post" id="addRecords">
+                        {% csrf_token %}
+                        {{ form |crispy }}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-success add" onclick="sendAdd()">Add
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--Modal delPhone-->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Удаление Phone</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <h5>Are you shure Delete {{ object.description }}!</h5>
+                    <form action="" method="post">
+                        {% csrf_token %}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-danger delete" onclick="sendDel()">Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    <script>
+        var _id = null;
+        var myModal = null;
+
+        function addRecord() {
+            myModal = new bootstrap.Modal(document.getElementById('addModal'), {
+                keyboard: false
+            })
+            myModal.show();
+        }
+
+        async function sendAdd(item) {
+            const form = $('#addRecords').getFormData();
+
+            let response = await fetch("http://127.0.0.1:8000/add/", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-type': 'application/json'
+                },
+                body: JSON.stringify(form)
+            });
+            if (response.ok) {
+                myModal.hide();
+                $('#cardblock').load(' #cardblock > *')
+            } else {
+                alert("Ошибка HTTP: " + response.status);
+            }
+            myModal = null;
+        }
+
+        function deletePhones(id) {
+            myModal = new bootstrap.Modal(document.getElementById('exampleModal'), {
+                keyboard: false
+            })
+            myModal.show();
+            _id = id;
+        }
+
+        async function sendDel() {
+            let response = await fetch("http://127.0.0.1:8000/delete/" + _id + "/", {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-type': 'application/json'
+                }
+            });
+            if (response.ok) {
+                myModal.hide();
+                $('#cardblock').load(' #cardblock > *')
+            } else {
+                alert("Ошибка HTTP: " + response.status);
+            }
+            _id = null;
+            myModal = null;
+        }
+
+        function getCookie(name) {
+            let cookie = {};
+            document.cookie.split(';').forEach(function (el) {
+                let [k, v] = el.split('=');
+                cookie[k.trim()] = v;
+            })
+            return cookie[name];
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        (function ($) {
+            $.fn.getFormData = function () {
+                var data = {};
+                var dataArray = $(this).serializeArray();
+                for (var i = 0; i < dataArray.length; i++) {
+                    data[dataArray[i].name] = dataArray[i].value;
+                }
+                return data;
+            }
+        })(jQuery);
+    </script>
+{% endblock %}
